@@ -29,11 +29,13 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 1. positive --> Ellipse or Circle
 2. zero --> Parabola
 3. negative --> Hyperbola
+* ellipse out of image
 
 ### Accumulating
 * semi major axis threshold
 * semi minor axis threshold
 * weighted average
+* (or costumize threshold)
 * select the best result
 
 ### plot ellipse
@@ -42,7 +44,7 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 
 ### skimage.transform hough_ellipse
 
-time consume: 1.5 seconds
+time consume: 2.67 seconds
 
 ![](/hough.png)
 
@@ -50,7 +52,8 @@ time consume: 1.5 seconds
 
 ### randomized hough ellipse detector
 
-time consume: 0.5 seconds
+1000 iteration for randomly picking pixels
+time consume: 0.49 seconds
 
 ![](/Rhough.png)
 
