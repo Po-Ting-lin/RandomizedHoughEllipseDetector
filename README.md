@@ -54,7 +54,7 @@ time consume: 2.67 seconds
 
 1000 iteration for randomly picking pixels
 
-time consume: 0.49 seconds
+time consume: 0.38 seconds
 
 ![](/Rhough.png)
 
