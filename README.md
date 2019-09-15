@@ -1,12 +1,12 @@
 # Randomized-Hough-Ellipse-Detector
 
-Purpose: find ellipse
-Date: 20190915
-Module: cv2, numpy, matplotlib, skimage, pandas, random
+* Purpose: find ellipse
+* Date: 20190915
+* Module: cv2, numpy, matplotlib, skimage, pandas, random
 
 Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from an image and fits them to a parameterized curve.
 
-[](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
+[Ellipse Detection Using Randomized HoughTransform](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
 
 ### Canny edge detecor
 * Noise reduction
@@ -41,6 +41,6 @@ Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from
 
 # demo
 
-
+![](/3894_img.png)
 
 
