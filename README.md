@@ -2,7 +2,8 @@
 find ellipse
 
 Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from an image and fits them to a parameterized curve.
-![](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
+
+[](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
 
 ### Canny edge detecor
 * Noise reduction
@@ -23,9 +24,9 @@ Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from
 
 ### Verifying the Ellipse Exists in the Image
 * The sign of 4AC−B^2 determines the type of conic section:
-positive --> Ellipse or Circle
-zero --> Parabola
-negative --> Hyperbola
+1. positive --> Ellipse or Circle
+2. zero --> Parabola
+3. negative --> Hyperbola
 
 ### Accumulating
 * semi major axis threshold
@@ -36,6 +37,7 @@ negative --> Hyperbola
 ### plot ellipse
 
 # demo
-![]()
+
+
 
 
