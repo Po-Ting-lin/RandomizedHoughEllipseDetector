@@ -4,8 +4,8 @@
 * Date: 20190915
 * Module: cv2, numpy, matplotlib, skimage, pandas, random
 
-Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from an image and fits them to a parameterized curve.
-Following the protocol of [Ellipse Detection Using Randomized HoughTransform](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
+
+To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from an image and fits them to a parameterized curve. Following the protocol of [Ellipse Detection Using Randomized HoughTransform](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
 
 ### Canny edge detecor
 * Noise reduction
@@ -41,8 +41,8 @@ Following the protocol of [Ellipse Detection Using Randomized HoughTransform](ht
 # test
 
 ### skimage.transform hough_ellipse
-![](/canny.png)
-![](/Rhough.png)
+![](/hough.png)
 time consume: 1.5 seconds
 
 ###
+
