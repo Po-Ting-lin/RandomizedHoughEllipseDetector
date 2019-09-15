@@ -12,13 +12,14 @@ class FindEllipseRHT(object):
     """ find a ellipse by randomized Hough Transform"""
     def __init__(self, phase_img):
         self.assert_img(phase_img)
+        self.origin = phase_img
         self.edge = self.canny_edge_detector(phase_img)
         self.edge_pixels = None
 
         # settings
-        self.max_iter = 700
-        self.major_bound = [40, 110]
-        self.minor_bound = [40, 110]
+        self.max_iter = 1000
+        self.major_bound = [50, 110]
+        self.minor_bound = [50, 110]
         self.flattening_bound = 0.5
 
         # accumulator
@@ -31,7 +32,7 @@ class FindEllipseRHT(object):
             raise AttributeError("img is not a numpy array!")
 
     def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=3.5, low_threshold=25, high_threshold=50)
+        edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=50)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
         edge[edged_image == True] = 255
         edge[edged_image == False] = 0
@@ -51,7 +52,8 @@ class FindEllipseRHT(object):
             point_package = [p1, p2, p3]
             # print(p1, p2, p3)
             for point in point_package:
-                black[point[1], point[0]] = 255
+                # black[point[1], point[0]] = 255
+                pass
 
             # find center
             try:
@@ -109,7 +111,7 @@ class FindEllipseRHT(object):
                 self.accumulator[similar_idx][2] = self.average_weight(self.accumulator[similar_idx][2], semi_axis1, w)
                 self.accumulator[similar_idx][3] = self.average_weight(self.accumulator[similar_idx][3], semi_axis2, w)
                 self.accumulator[similar_idx][4] = self.average_weight(self.accumulator[similar_idx][4], angle, w)
-
+            break
         plt.figure()  # demo
         plt.title("nice ellipse")
         plt.imshow(black)
@@ -121,9 +123,11 @@ class FindEllipseRHT(object):
         self.accumulator = df.sort_values(by=['score'], ascending=False)
 
         # select the ellipse with the best score
-        best = np.squeeze(np.array(self.accumulator.iloc[1]))
+        best = np.squeeze(np.array(self.accumulator.iloc[0]))
         best = list(map(int, np.around(best)))
+        self.plot_best(best=best)
 
+    def plot_best(self, best):
         # plot best ellipse
         result = np.zeros(self.edge.shape, dtype=np.uint8)
         result = cv2.ellipse(result, (best[0], best[1]), (best[2], best[3]), best[4] * 180 / np.pi, 0, 360, color=255, thickness=1)
@@ -131,6 +135,15 @@ class FindEllipseRHT(object):
         plt.title("best ellipse")
         plt.imshow(result)
         plt.show()
+        fig, ax = plt.subplots(nrows=1, ncols=2)
+        ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
+        ax[0].set_title("phase image")
+        crop = self.origin.copy()
+        crop[self.edge == 255] = 0  # blue
+        crop[result == 255] = 230  # red
+        ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
+        ax[1].set_title("Hough ellipse detector")
+        fig.show()
 
     def randomly_pick_point(self):
         ran = random.sample(self.edge_pixels, 3)
@@ -300,6 +313,21 @@ class FindEllipseRHT(object):
         plt.title("line")
         plt.imshow(canvas)
         plt.show()
+
+
+# path = r"C:\Users\BT\Desktop\kaggle\RPE_crop_image"
+# original_image = cv2.imread(path + "\\3894_img.png", 0)
+#
+# import time
+# time1 = time.time()
+# test = FindEllipseRHT(original_image)
+# plt.figure()
+# plt.title("origin")
+# plt.imshow(test.edge)
+# plt.show()
+# test.run()
+# time2 = time.time()
+# print("time consume: ", time2 - time1)
 
 
 
