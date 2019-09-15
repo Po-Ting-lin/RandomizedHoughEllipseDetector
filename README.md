@@ -30,6 +30,7 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 2. zero --> Parabola
 3. negative --> Hyperbola
 * ellipse out of image
+* flattening is too large 
 
 ### Accumulating
 * semi major axis threshold
