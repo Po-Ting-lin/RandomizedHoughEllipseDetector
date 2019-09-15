@@ -1,7 +1,8 @@
 # Randomized-Hough-Ellipse-Detector
 find ellipse
 
-Xu proposed a Randomized Hough transform (RHT).RHT randomly selectsnpixels from an image and fits them to a parameterizedcurve.
+Xu proposed a Randomized Hough transform (RHT). RHT randomly selectsnpixels from an image and fits them to a parameterized curve.
+[](https://www.researchgate.net/profile/Samuel_Inverso/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform/links/552bd77a0cf29b22c9c200df.pdf)
 
 ### Canny edge detecor
 * Noise reduction
