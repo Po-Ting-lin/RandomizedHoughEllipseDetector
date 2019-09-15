@@ -31,6 +31,19 @@ class FindEllipseRHT(object):
         except AttributeError:
             raise AttributeError("img is not a numpy array!")
 
+    def point_out_of_image(self, point):
+        """ point X, Y"""
+        if point[0] < 0 or point[0] >= self.edge.shape[1] or point[1] < 0 or point[1] >= self.edge.shape[0]:
+            return True
+        else:
+            return False
+
+    def ellipse_out_of_image(self, pad_img, pad_width):
+        if np.sum(pad_img[:pad_width, :]) + np.sum(pad_img[-pad_width:, :]) + np.sum(pad_img[:, :pad_width]) + np.sum(pad_img[:, -pad_width:]) > 0:
+            return True
+        else:
+            return False
+
     def canny_edge_detector(self, img):
         edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=50)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
@@ -46,7 +59,8 @@ class FindEllipseRHT(object):
 
         for count, i in enumerate(range(self.max_iter)):
             # current iteration
-            # print(count)
+            if count == 499:
+                random.seed(30)
             # find potential ellipse
             p1, p2, p3 = self.randomly_pick_point()
             point_package = [p1, p2, p3]
@@ -251,12 +265,6 @@ class FindEllipseRHT(object):
             angle = 0
         return angle
 
-    def ellipse_out_of_image(self, pad_img, pad_width):
-        if np.sum(pad_img[:pad_width, :]) + np.sum(pad_img[-pad_width:, :]) + np.sum(pad_img[:, :pad_width]) + np.sum(pad_img[:, -pad_width:]) > 0:
-            return True
-        else:
-            return False
-
     def assert_valid_ellipse(self, a, b, c):
         if a*c - b**2 > 0:
             return True
@@ -274,13 +282,6 @@ class FindEllipseRHT(object):
 
     def average_weight(self, old, now, score):
         return (old * score + now) / (score+1)
-
-    def point_out_of_image(self, point):
-        """ point X, Y"""
-        if point[0] < 0 or point[0] >= self.edge.shape[1] or point[1] < 0 or point[1] >= self.edge.shape[0]:
-            return True
-        else:
-            return False
 
     def plot_line(self, m, c):
         if m == 0:
@@ -314,20 +315,6 @@ class FindEllipseRHT(object):
         plt.imshow(canvas)
         plt.show()
 
-
-# path = r"C:\Users\BT\Desktop\kaggle\RPE_crop_image"
-# original_image = cv2.imread(path + "\\3894_img.png", 0)
-#
-# import time
-# time1 = time.time()
-# test = FindEllipseRHT(original_image)
-# plt.figure()
-# plt.title("origin")
-# plt.imshow(test.edge)
-# plt.show()
-# test.run()
-# time2 = time.time()
-# print("time consume: ", time2 - time1)
 
 
 
