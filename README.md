@@ -14,15 +14,17 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 * Double threshold
 
 ### Randomly pick three points
+Use random.sample() to select three points; then, find the parameter of ellipse as a candidate by these points.  
 
 ### Determining Ellipse Center(p, q)
 * Determine the equation of the line for each point where the line’s slope is the gradient at the point.
 * Determine the intersection of the tangents passing throughpoint pairs (X1,X2) and (X2,X3).
-* Calculate the bisector of the tangent intersection points. Thisis a line from the tangent’s intersection,t, to the midpoint of the twopoints,m
+* Calculate the bisector of the tangent intersection points. Thisis a line from the tangent’s intersection,t, to the midpoint of the twopoints,m.
 * Find the bisectors intersection to give the ellipse’s center,O
 
 ### Determining semimajor (a) and semiminor axis’ (b) )
-* Solve ellipse equation
+* Shift the ellipse to origin. (Shift center (p, q) to (0, 0))
+* Solve ellipse equation with the three points  
 
 ### Verifying the Ellipse Exists in the Image
 * The sign of 4AC−B^2 determines the type of conic section:
@@ -39,7 +41,6 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 * (or costumize threshold)
 * select the best result
 
-### plot ellipse
 
 # Comparison with the original Hough ellipse transform
 
@@ -49,6 +50,7 @@ n = 337, time = 2.67 sec
 n = 439, time = 5.1 sec  
 n = 644, time = 15.3 sec  
 time complexity: larger than cubic  
+Hough ellipse transform is impracticable on account of the computational process.  
 
 ![](/hough.png)
 
@@ -62,6 +64,7 @@ time complexity: linear
 n = 337, time = 0.7 sec  
 n = 439, time = 1.1 sec  
 n = 644, time = 1.5 sec  
+Nice!
 
 ![](/Rhough.png)
 
