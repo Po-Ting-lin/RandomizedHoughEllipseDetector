@@ -48,7 +48,7 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 n = 337, time = 2.67 sec  
 n = 439, time = 5.1 sec  
 n = 644, time = 15.3 sec  
-time complexity: larger than cubic
+time complexity: larger than cubic  
 
 ![](/hough.png)
 
@@ -56,8 +56,8 @@ time complexity: larger than cubic
 
 ### randomized hough ellipse detector
 
-the number of iteration for randomly picking pixels == edge pixels * 5
-time complexity: linear
+the number of iteration for randomly picking pixels == edge pixels * 5  
+time complexity: linear  
 
 n = 337, time = 0.7 sec  
 n = 439, time = 1.1 sec  
