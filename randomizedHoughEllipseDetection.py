@@ -1,8 +1,6 @@
 import cv2
 import numpy as np
 import random
-import math
-import time
 from matplotlib import pyplot as plt
 from skimage.feature import canny
 import pandas as pd
@@ -17,7 +15,7 @@ class FindEllipseRHT(object):
         self.edge_pixels = None
 
         # settings
-        self.max_iter = 1000
+        self.max_iter = 500
         self.major_bound = [50, 110]
         self.minor_bound = [50, 110]
         self.flattening_bound = 0.5
@@ -45,26 +43,32 @@ class FindEllipseRHT(object):
             return False
 
     def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=50)
+        edged_image = canny(img, sigma=3.8, low_threshold=25, high_threshold=50)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
         edge[edged_image == True] = 255
         edge[edged_image == False] = 0
         return edge
 
     def run(self):
+        # seed
         random.seed(41)
+
+        # find coordinates of edge
         edge_pixels = np.array(np.where(self.edge == 255)).T
         self.edge_pixels = [p for p in edge_pixels]
+
+        # demo
         black = np.zeros(self.edge.shape, dtype=np.uint8)  # demo
 
+        # determine the number of iteration
+        if len(self.edge_pixels) > 100:
+            self.max_iter = len(self.edge_pixels) * 5
+
         for count, i in enumerate(range(self.max_iter)):
-            # current iteration
-            if count == 499:
-                random.seed(30)
-            # find potential ellipse
+            # find nice ellipse
             p1, p2, p3 = self.randomly_pick_point()
             point_package = [p1, p2, p3]
-            # print(p1, p2, p3)
+
             for point in point_package:
                 # black[point[1], point[0]] = 255
                 pass
@@ -125,7 +129,7 @@ class FindEllipseRHT(object):
                 self.accumulator[similar_idx][2] = self.average_weight(self.accumulator[similar_idx][2], semi_axis1, w)
                 self.accumulator[similar_idx][3] = self.average_weight(self.accumulator[similar_idx][3], semi_axis2, w)
                 self.accumulator[similar_idx][4] = self.average_weight(self.accumulator[similar_idx][4], angle, w)
-            break
+
         plt.figure()  # demo
         plt.title("nice ellipse")
         plt.imshow(black)
