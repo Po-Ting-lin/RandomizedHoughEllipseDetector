@@ -45,7 +45,7 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 
 ### skimage.transform hough_ellipse
 
-time consume: 2.67 seconds
+time consume: 2.67 seconds (very slow if there are many edge pixels)
 
 ![](/hough.png)
 
