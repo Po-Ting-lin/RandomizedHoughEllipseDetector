@@ -41,7 +41,7 @@ To reduce these problems Xu proposed a Randomized Hough transform (RHT). RHT ran
 
 ### plot ellipse
 
-# test
+# Comparison with the original Hough ellipse transform
 
 ### skimage.transform hough_ellipse
 
