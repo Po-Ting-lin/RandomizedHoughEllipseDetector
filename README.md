@@ -26,6 +26,8 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 * Shift the ellipse to origin. (Shift center (p, q) to (0, 0))
 * Solve ellipse equation with the three points  
 
+![](/image/findinghough.png)  
+
 ### Verifying the Ellipse Exists in the Image
 * The sign of 4AC−B^2 determines the type of conic section:
 1. positive --> Ellipse or Circle
@@ -52,7 +54,7 @@ n = 644, time = 15.3 sec
 time complexity: more than cubic  
 Hough ellipse transform is impracticable on account of the computational process.  
 
-![](/hough.png)
+![](/image/hough.png)
 
 
 
@@ -66,7 +68,7 @@ n = 439, time = 1.1 sec
 n = 644, time = 1.5 sec  
 Nice!
 
-![](/Rhough.png)
+![](/image/Rhough.png)
 
 
 
