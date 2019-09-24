@@ -8,29 +8,38 @@ import pandas as pd
 
 class FindEllipseRHT(object):
     """ find a ellipse by randomized Hough Transform"""
-    def __init__(self, phase_img):
-        self.assert_img(phase_img)
-        self.origin = phase_img
-        self.edge = self.canny_edge_detector(phase_img)
+    def __init__(self, phase_img, mask):
+        # phase image
+        self.origin = self.assert_img(phase_img)
+        self.mask = mask
+
+        # canny edge operator
+        self.edge = None
         self.edge_pixels = None
 
         # settings
         self.max_iter = 500
-        self.major_bound = [50, 110]
-        self.minor_bound = [50, 110]
-        self.flattening_bound = 0.5
+        self.major_bound = [60, 250]
+        self.minor_bound = [60, 250]
+        self.flattening_bound = 0.8
 
         # plot
         self.black = None
 
         # accumulator
         self.accumulator = []
+        self.score_threshold = 7
 
     def assert_img(self, img):
         try:
             assert len(img.shape) == 2
         except AttributeError:
             raise AttributeError("img is not a numpy array!")
+        return img
+
+    def assert_edge_pixels(self, edge_pixels):
+        if len(edge_pixels) == 0:
+            raise AssertionError("no edge!")
 
     def point_out_of_image(self, point):
         """ point X, Y"""
@@ -46,18 +55,25 @@ class FindEllipseRHT(object):
             return False
 
     def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=50)
+        edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=40, mask=self.mask)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
         edge[edged_image == True] = 255
         edge[edged_image == False] = 0
+        plt.figure()
+        plt.imshow(edge)
+        plt.show()
         return edge
 
-    def run(self, debug_mode=False):
+    def run(self, debug_mode=False, plot_mode=False):
         # seed
         random.seed(41)
 
+        # canny
+        self.edge = self.canny_edge_detector(self.origin)
+
         # find coordinates of edge
         edge_pixels = np.array(np.where(self.edge == 255)).T
+        self.assert_edge_pixels(edge_pixels)
         self.edge_pixels = [p for p in edge_pixels]
 
         # demo
@@ -114,8 +130,8 @@ class FindEllipseRHT(object):
             if self.ellipse_out_of_image(pad_black, pad_width):
                 continue
 
-            # demo
-            # black = cv2.ellipse(black, center_plot, axis_plot, angle*180/np.pi, 0, 360, color=255, thickness=1)
+            if plot_mode:
+                self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle*180/np.pi, 0, 360, color=255, thickness=1)
 
             # accumulate
             similar_idx = self.is_similar(center[0], center[1], semi_axisx, semi_axisy, angle)
@@ -137,32 +153,33 @@ class FindEllipseRHT(object):
             # plot candidate
             if debug_mode:
                 candidate += 1
-                if candidate == 8:
+                if candidate == 12:
+                    print("axis_plot", 2*axis_plot[0], 2*axis_plot[1])
                     self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-                    print("axis_plot[0], axis_plot[1], angle*180/np.pi: ", axis_plot[0], axis_plot[1], angle*180/np.pi)
                     self.black[int(center[1]), int(center[0])] = 230
                     self.find_center(point_package, plot_mode=True)
                     for point in point_package:
                         self.black[point[1], point[0]] = 80
-                        self.test_find_semi_axis(point_package, center)
-                        pass
                     break
 
-        plt.figure()  # demo
-        plt.title("nice ellipse")
-        plt.imshow(self.black, cmap='jet')
-        plt.show()
+        if plot_mode or debug_mode:
+            plt.figure()  # demo
+            plt.title("nice ellipse")
+            plt.imshow(self.black, cmap='jet')
+            plt.show()
 
         # sort ellipse candidates
         self.accumulator = np.array(self.accumulator)
         df = pd.DataFrame(data=self.accumulator, columns=['x', 'y', 'axis1', 'axis2', 'angle', 'score'])
         self.accumulator = df.sort_values(by=['score'], ascending=False)
 
-        # select the ellipse with the best score
+        # select the ellipses with the highest score
         best = np.squeeze(np.array(self.accumulator.iloc[0]))
         p, q, a, b = list(map(int, np.around(best[:4])))
-        print(p, q, a, b, best[-2])
-        self.plot_best(p, q, a, b, best[-2])
+        if plot_mode:
+            self.plot_best(p, q, a, b, best[-2])
+        print("score: ", best[-1])
+        self.inner_outer_phase(p, q, a, b, best[-2])
 
     def plot_best(self, p, q, a, b, angle):
         # plot best ellipse
@@ -171,10 +188,6 @@ class FindEllipseRHT(object):
             result = cv2.ellipse(result, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
         else:
             result = cv2.ellipse(result, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-        plt.figure()  # demo
-        plt.title("best ellipse")
-        plt.imshow(result)
-        plt.show()
         fig, ax = plt.subplots(nrows=1, ncols=2)
         ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
         ax[0].set_title("phase image")
@@ -184,6 +197,21 @@ class FindEllipseRHT(object):
         ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
         ax[1].set_title("Hough ellipse detector")
         fig.show()
+
+    def inner_outer_phase(self, p, q, a, b, angle):
+        ellipse_label = np.zeros(self.origin.shape, dtype=np.uint8)
+        if a > b:
+            ellipse_label = cv2.ellipse(ellipse_label, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=-1)
+        else:
+            ellipse_label = cv2.ellipse(ellipse_label, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=-1)
+        inner_list = self.origin[ellipse_label == 255]
+        outer_list = self.origin[ellipse_label != 255]
+        inner_mean = np.mean(inner_list)
+        inner_std = np.std(inner_list)
+        outer_mean = np.mean(outer_list)
+        outer_std = np.std(outer_list)
+        print("inner outer std: ", inner_std, outer_std)
+        print("phase ratio: ", round(inner_mean/outer_mean, 3))
 
     def randomly_pick_point(self):
         ran = random.sample(self.edge_pixels, 3)
@@ -255,38 +283,17 @@ class FindEllipseRHT(object):
         coef_matrix = np.array([[x1**2, 2*x1*y1, y1**2], [x2**2, 2*x2*y2, y2**2], [x3**2, 2*x3*y3, y3**2]])
         dependent_variable = np.array([1, 1, 1])
         A, B, C = np.linalg.solve(coef_matrix, dependent_variable)
-        angle = self.calculate_rotation_angle(A, B, C)
-        if self.assert_valid_ellipse(A, B, C):
-            A, B, C = np.sqrt(np.abs(np.reciprocal([A, B, C])))
-            semi_axisx = A
-            semi_axisy = C
-            return semi_axisx, semi_axisy, angle
-        else:
-            return None, None, None
 
-    def test_find_semi_axis(self, pt, center):
-        # shift to origin
-        npt = []
-        for p in pt:
-            npt.append((p[0] - center[0], p[1] - center[1]))
-        # semi axis
-        x1 = npt[0][0]
-        y1 = npt[0][1]
-        x2 = npt[1][0]
-        y2 = npt[1][1]
-        x3 = npt[2][0]
-        y3 = npt[2][1]
-        coef_matrix = np.array([[x1**2, 2*x1*y1, y1**2], [x2**2, 2*x2*y2, y2**2], [x3**2, 2*x3*y3, y3**2]])
-        dependent_variable = np.array([1, 1, 1])
-        sol = np.linalg.solve(coef_matrix, dependent_variable)
-        angle = self.calculate_rotation_angle(sol[0], sol[1], sol[2])
-        # print("angle: ", angle*180/np.pi)
-        # print("tan: ", (sol[2]-sol[0]-np.sqrt((sol[0] - sol[2])**2+sol[1]**2))/sol[1])
-        if self.assert_valid_ellipse(sol[0], sol[1], sol[2]):
-            sol = np.sqrt(np.abs(np.reciprocal(sol)))
-            semi_axis1 = sol[0]
-            semi_axis2 = sol[2]
-            return semi_axis1, semi_axis2, angle
+        # major = np.sqrt(np.cos(2*angle) / (a - (a + c) * np.pow(np.sin(angle), 2)));
+        # new_minor_axis = major / np.sqrt((a + c) * np.pow(major,2) - 1)
+
+        if self.assert_valid_ellipse(A, B, C):
+            angle = self.calculate_rotation_angle(A, B, C)
+            # angle = self.calculate_angle(A, B, C)
+            major = np.sqrt(np.cos(2*angle)/(A-(A+C)*np.sin(angle)**2))
+            minor = major/np.sqrt((A+C)*major**2-1)
+            # A, B, C = np.sqrt(np.abs(np.reciprocal([A, B, C])))
+            return major, minor, angle
         else:
             return None, None, None
 
@@ -326,12 +333,16 @@ class FindEllipseRHT(object):
         else:
             return False
 
-    def assert_diameter(self, semi_major_axis, semi_minor_axis):
+    def assert_diameter(self, semi_axis_x, semi_axis_y):
+        if semi_axis_x > semi_axis_y:
+            major, minor = semi_axis_x, semi_axis_y
+        else:
+            major, minor = semi_axis_y, semi_axis_x
         # diameter
-        if (self.major_bound[0] < 2*semi_major_axis < self.major_bound[1]) and (self.minor_bound[0] < 2*semi_minor_axis < self.minor_bound[1]):
+        if (self.major_bound[0] < 2*major < self.major_bound[1]) and (self.minor_bound[0] < 2*minor < self.minor_bound[1]):
             # Flattening
-            flattening = (semi_major_axis - semi_minor_axis) / semi_major_axis
-            if -self.flattening_bound < flattening < self.flattening_bound:
+            flattening = (major - minor) / major
+            if flattening < self.flattening_bound:
                 return True
         return False
 
