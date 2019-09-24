@@ -4,6 +4,7 @@ import random
 from matplotlib import pyplot as plt
 from skimage.feature import canny
 import pandas as pd
+import time
 
 
 class FindEllipseRHT(object):
@@ -19,8 +20,8 @@ class FindEllipseRHT(object):
 
         # settings
         self.max_iter = 500
-        self.major_bound = [60, 250]
-        self.minor_bound = [60, 250]
+        self.major_bound = [100, 250]
+        self.minor_bound = [80, 250]
         self.flattening_bound = 0.8
 
         # plot
@@ -55,7 +56,7 @@ class FindEllipseRHT(object):
             return False
 
     def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=4, low_threshold=25, high_threshold=40, mask=self.mask)
+        edged_image = canny(img, sigma=3.5, low_threshold=25, high_threshold=30, mask=self.mask)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
         edge[edged_image == True] = 255
         edge[edged_image == False] = 0
@@ -66,7 +67,7 @@ class FindEllipseRHT(object):
 
     def run(self, debug_mode=False, plot_mode=False):
         # seed
-        random.seed(41)
+        random.seed((time.time()*100) % 50)
 
         # canny
         self.edge = self.canny_edge_detector(self.origin)
@@ -85,6 +86,7 @@ class FindEllipseRHT(object):
 
         if debug_mode:
             candidate = 0
+
         for count, i in enumerate(range(self.max_iter)):
             # find nice ellipse
             p1, p2, p3 = self.randomly_pick_point()
