@@ -330,8 +330,9 @@ class FindEllipseRHT(object):
                 # angle_dist = (e[4] - angle)**2
                 angle_dist = (abs(e[4] - angle))
                 # print(area_dist, center_dist, angle_dist)
-                axis_dist = abs(max(axis1,axis2)-max(e[2],e[3]))
-                if (area_dist < 1000) and (center_dist < 10) and ( angle_dist < 0.1745):
+                laxis_dist = abs(max(axis1,axis2)-max(e[2],e[3]))
+                saxis_dist = abs(min(axis1,axis2)-min(e[2],e[3]))
+                if (laxis_dist < 5) and (center_dist < 5) and ( angle_dist < 0.1745) and(saxis_dist < 10):
                     return idx
         return similar_idx
 
