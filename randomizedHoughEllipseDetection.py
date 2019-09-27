@@ -19,28 +19,28 @@ class FindEllipseRHT(object):
         self.edge_pixels = None
 
         # settings
-        self.max_iter = 800
-        self.major_bound = [100, 250]
-        self.minor_bound = [80, 250]
-        self.flattening_bound = 0.8
+        self.max_iter = 500
+        self.major_bound = [55, 250]
+        self.minor_bound = [55, 250]
+        self.max_flattening_bound = 0.8
 
         # plot
         self.black = None
 
         # accumulator
         self.accumulator = []
-        self.score_threshold = 7
+        self.score_threshold = 10
 
     def assert_img(self, img):
-        try:
-            assert len(img.shape) == 2
-        except AttributeError:
-            raise AttributeError("img is not a numpy array!")
+        assert len(img.shape) == 2, "this img is not 2D image"
+        assert type(img).__module__ == np.__name__, "this img is not numpy array"
         return img
 
     def assert_edge_pixels(self, edge_pixels):
-        if len(edge_pixels) == 0:
-            raise AssertionError("no edge!")
+        if len(edge_pixels) < 10:
+            return False
+        else:
+            return True
 
     def point_out_of_image(self, point):
         """ point X, Y"""
@@ -56,13 +56,13 @@ class FindEllipseRHT(object):
             return False
 
     def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=3.5, low_threshold=25, high_threshold=30,mask = self.mask)
+        edged_image = canny(img, sigma=3.5, low_threshold=25, high_threshold=30, mask=self.mask)
         edge = np.zeros(edged_image.shape, dtype=np.uint8)
         edge[edged_image == True] = 255
         edge[edged_image == False] = 0
-        plt.figure()
-        plt.imshow(edge)
-        plt.show()
+        # plt.figure()
+        # plt.imshow(edge)
+        # plt.show()
         return edge
 
     def run(self, debug_mode=False, plot_mode=False):
@@ -72,10 +72,13 @@ class FindEllipseRHT(object):
         # canny
         self.edge = self.canny_edge_detector(self.origin)
 
-
         # find coordinates of edge
         edge_pixels = np.array(np.where(self.edge == 255)).T
-        self.assert_edge_pixels(edge_pixels)
+
+        # no edge --> no ellipse score
+        if not self.assert_edge_pixels(edge_pixels):
+            return 0.0
+
         self.edge_pixels = [p for p in edge_pixels]
 
         # demo
@@ -85,10 +88,9 @@ class FindEllipseRHT(object):
         if len(self.edge_pixels) > 100:
             self.max_iter = len(self.edge_pixels) * 5
 
-        if debug_mode:
-            candidate = 0
+        candidate = 0
 
-        for count, i in enumerate(range(self.max_iter)):
+        for i in range(self.max_iter):
             # find nice ellipse
             p1, p2, p3 = self.randomly_pick_point()
             point_package = [p1, p2, p3]
@@ -97,34 +99,29 @@ class FindEllipseRHT(object):
             try:
                 center = self.find_center(point_package)
             except np.linalg.LinAlgError as err:
-                print(err)
                 continue
 
-            # assert center is reasonable
+            # assert center
             if self.point_out_of_image(center):
                 continue
 
             # find axis
             try:
-                semi_axisx, semi_axisy, angle = self.find_semi_axis(point_package, center)
+                semi_major, semi_minor, angle = self.find_semi_axis(point_package, center)
             except np.linalg.LinAlgError as err:
-                print(err)
                 continue
 
             # assert is ellipse
-            if (semi_axisx is None) and (semi_axisy is None):
+            if (semi_major is None) or (semi_minor is None):
                 continue
 
-            # assert diameter
-            if not self.assert_diameter(semi_axisx, semi_axisy):
+            # constraint diameter
+            if not self.assert_diameter(semi_major, semi_minor):
                 continue
 
             # plot
             center_plot = (int(round(center[0])), int(round(center[1])))
-            if semi_axisx > semi_axisy:
-                axis_plot = (int(round(semi_axisx)), int(round(semi_axisy)))
-            else:
-                axis_plot = (int(round(semi_axisy)), int(round(semi_axisx)))
+            axis_plot = (int(round(semi_major)), int(round(semi_minor)))
 
             # bound
             pad_width = 2
@@ -137,11 +134,14 @@ class FindEllipseRHT(object):
                 self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle*180/np.pi, 0, 360, color=255, thickness=1)
 
             # accumulate
-            similar_idx = self.is_similar(center[0], center[1], semi_axisx, semi_axisy, angle)
+            similar_idx = self.is_similar(center[0], center[1], semi_major, semi_minor, angle)
+
+            # does not find any similar ellipse in accumulator
             if similar_idx == -1:
                 score = 1
-                # print("append!!")
-                self.accumulator.append([center[0], center[1], semi_axisx, semi_axisy, angle, score])
+                self.accumulator.append([center[0], center[1], semi_major, semi_minor, angle, score])
+
+            # find the most similar in in accumulator
             else:
                 # score += 1
                 self.accumulator[similar_idx][-1] += 1
@@ -149,20 +149,20 @@ class FindEllipseRHT(object):
                 w = self.accumulator[similar_idx][-1]
                 self.accumulator[similar_idx][0] = self.average_weight(self.accumulator[similar_idx][0], center[0], w)
                 self.accumulator[similar_idx][1] = self.average_weight(self.accumulator[similar_idx][1], center[1], w)
-                self.accumulator[similar_idx][2] = self.average_weight(self.accumulator[similar_idx][2], semi_axisx, w)
-                self.accumulator[similar_idx][3] = self.average_weight(self.accumulator[similar_idx][3], semi_axisy, w)
+                self.accumulator[similar_idx][2] = self.average_weight(self.accumulator[similar_idx][2], semi_major, w)
+                self.accumulator[similar_idx][3] = self.average_weight(self.accumulator[similar_idx][3], semi_minor, w)
                 self.accumulator[similar_idx][4] = self.average_weight(self.accumulator[similar_idx][4], angle, w)
 
             # plot candidate
             if debug_mode:
                 candidate += 1
-                if candidate == 10:
+                if candidate == 12:
                     print("axis_plot", 2*axis_plot[0], 2*axis_plot[1])
                     self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle * 180 / np.pi, 0, 360, color=255, thickness=1)
                     self.black[int(center[1]), int(center[0])] = 230
                     self.find_center(point_package, plot_mode=True)
                     for point in point_package:
-                        self.black[point[1], point[0]] = 80
+                        self.black[point[1], point[0]] = 90
                     break
 
         if plot_mode or debug_mode:
@@ -173,6 +173,8 @@ class FindEllipseRHT(object):
 
         # sort ellipse candidates
         self.accumulator = np.array(self.accumulator)
+        if self.accumulator.shape[0] == 0:
+            return 0.0
         df = pd.DataFrame(data=self.accumulator, columns=['x', 'y', 'axis1', 'axis2', 'angle', 'score'])
         self.accumulator = df.sort_values(by=['score'], ascending=False)
 
@@ -182,32 +184,29 @@ class FindEllipseRHT(object):
         if plot_mode:
             self.plot_best(p, q, a, b, best[-2])
         print("score: ", best[-1])
-        self.inner_outer_phase(p, q, a, b, best[-2])
+        return float(best[-1])
+        # if best[-1] < self.score_threshold:
+        #     return 0.0
+        # else:
+        #     return self.inner_outer_phase(p, q, a, b, best[-2])
 
     def plot_best(self, p, q, a, b, angle):
         # plot best ellipse
         result = np.zeros(self.edge.shape, dtype=np.uint8)
-        if a > b :
+        if a > b:
             result = cv2.ellipse(result, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-
-        else :
+        else:
             result = cv2.ellipse(result, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
 
-
-        # # fig, ax = plt.subplots(1,2,2)
-        # ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
-        # ax[0].set_title("phase image")
+        fig, ax = plt.subplots(nrows=1, ncols=2)
+        ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
+        ax[0].set_title("phase image")
         crop = self.origin.copy()
         crop[self.edge == 255] = 0  # blue
         crop[result == 255] = 230  # red
-        # ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
-        # ax[1].set_title("Hough ellipse detector")
-        # fig.show()
-        print(crop)
-        plt.figure()
-        plt.imshow(crop)
-        plt.show()
-
+        ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
+        ax[1].set_title("Hough ellipse detector")
+        fig.show()
 
     def inner_outer_phase(self, p, q, a, b, angle):
         ellipse_label = np.zeros(self.origin.shape, dtype=np.uint8)
@@ -216,13 +215,12 @@ class FindEllipseRHT(object):
         else:
             ellipse_label = cv2.ellipse(ellipse_label, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=-1)
         inner_list = self.origin[ellipse_label == 255]
-        outer_list = self.origin[ellipse_label != 255]
+        outer_list = self.origin[(ellipse_label != 255) & (self.mask == True)]
         inner_mean = np.mean(inner_list)
         inner_std = np.std(inner_list)
         outer_mean = np.mean(outer_list)
         outer_std = np.std(outer_list)
-        print("inner outer std: ", inner_std, outer_std)
-        print("phase ratio: ", round(inner_mean/outer_mean, 3))
+        return round(inner_mean/outer_mean, 3)
 
     def randomly_pick_point(self):
         ran = random.sample(self.edge_pixels, 3)
@@ -267,7 +265,7 @@ class FindEllipseRHT(object):
             # bisector
             slope = (m1[1] - t12[1]) / (m1[0] - t12[0])
             intercept = (m1[0]*t12[1] - t12[0]*m1[1]) / (m1[0] - t12[0])
-            # self.plot_line(slope, intercept)
+
             slope_arr.append(slope)
             intercept_arr.append(intercept)
             if plot_mode:
@@ -292,28 +290,20 @@ class FindEllipseRHT(object):
         x3 = npt[2][0]
         y3 = npt[2][1]
         coef_matrix = np.array([[x1**2, 2*x1*y1, y1**2], [x2**2, 2*x2*y2, y2**2], [x3**2, 2*x3*y3, y3**2]])
-        dependent_variable = np.array([1,1,1])
+        dependent_variable = np.array([1, 1, 1])
         A, B, C = np.linalg.solve(coef_matrix, dependent_variable)
-
-
-
-        # major = np.sqrt(np.cos(2*angle) / (a - (a + c) * np.pow(np.sin(angle), 2)));
-        # new_minor_axis = major / np.sqrt((a + c) * np.pow(major,2) - 1)
 
         if self.assert_valid_ellipse(A, B, C):
             angle = self.calculate_rotation_angle_v2(A, B, C)
-            # assert np.isnan(angle)
-            # angle = self.calculate_angle(A, B, C)
-            AXIS_MAT = np.array([[np.sin(angle) ** 2, np.cos(angle) ** 2], [np.cos(angle) ** 2, np.sin(angle) ** 2]])
-            AXIS_MAT_ANS = np.array([A, C])
-            X , Y = np.linalg.solve(AXIS_MAT, AXIS_MAT_ANS)
-            major = 1/np.sqrt(max(X,Y))
-            # major = np.sqrt(np.cos(2*angle)/(A-(A+C)*np.sin(angle)**2))
-            minor = 1/np.sqrt(min(X,Y))
-            # minor = major/np.sqrt((A+C)*major**2-1)
-            # A, B, C = np.sqrt(np.abs(np.reciprocal([A, B, C])))
-            # print(angle)
+            axis_coef = np.array([[np.sin(angle)**2, np.cos(angle)**2], [np.cos(angle)**2, np.sin(angle)**2]])
+            axis_ans = np.array([A, C])
+            a, b = np.linalg.solve(axis_coef, axis_ans)
+        else:
+            return None, None, None
 
+        if a > 0 and b > 0:
+            major = 1/np.sqrt(max(a, b))
+            minor = 1/np.sqrt(min(a, b))
             return major, minor, angle
         else:
             return None, None, None
@@ -327,34 +317,12 @@ class FindEllipseRHT(object):
                 # center dist
                 center_dist = np.sqrt((e[0] - p)**2 + (e[1] - q)**2)
                 # angle dist
-                # angle_dist = (e[4] - angle)**2
                 angle_dist = (abs(e[4] - angle))
-                # print(area_dist, center_dist, angle_dist)
-                laxis_dist = abs(max(axis1,axis2)-max(e[2],e[3]))
-                saxis_dist = abs(min(axis1,axis2)-min(e[2],e[3]))
-                if (laxis_dist < 5) and (center_dist < 5) and ( angle_dist < 0.1745) and(saxis_dist < 10):
+                major_axis_dist = abs(max(axis1, axis2)-max(e[2], e[3]))
+                minor_axis_dist = abs(min(axis1, axis2)-min(e[2], e[3]))
+                if (major_axis_dist < 5) and (center_dist < 5) and (angle_dist < 0.1745) and (minor_axis_dist < 10):
                     return idx
         return similar_idx
-
-    def calculate_rotation_angle(self, a, b, c):
-        if b == 0 and a < c:
-            # 0 degree
-            angle = 0
-        elif b == 0 and c < a:
-            # 90 degree
-            angle = np.pi/2
-        elif b != 0:
-            # tilt
-            angle = np.arctan((c-a-np.sqrt((a - c)**2+b**2))/b)
-        else:
-            # circle, no angle
-            angle = 0
-
-        if angle < 0:
-            angle += np.pi
-        elif angle > np.pi:
-            angle -= np.pi
-        return angle
 
     def calculate_rotation_angle_v2(self, a, b, c):
         if a == c:
@@ -364,13 +332,9 @@ class FindEllipseRHT(object):
 
         if a > c:
             if b < 0:
-                angle = angle-(-0.5*np.pi)
+                angle += 0.5*np.pi
             elif b > 0:
-                angle = angle-(0.5*np.pi)
-        # if not np.isnan(angle):
-        #     pass
-        # else:
-        print(angle,a, b, c)
+                angle -= 0.5*np.pi
         return angle
 
     def assert_valid_ellipse(self, a, b, c):
@@ -388,9 +352,9 @@ class FindEllipseRHT(object):
         if (self.major_bound[0] < 2*major < self.major_bound[1]) and (self.minor_bound[0] < 2*minor < self.minor_bound[1]):
             # Flattening
             flattening = (major - minor) / major
-            if flattening < self.flattening_bound:
+            if flattening < self.max_flattening_bound:
                 return True
-        return True
+        return False
 
     def average_weight(self, old, now, score):
         return (old * score + now) / (score+1)
@@ -421,4 +385,8 @@ class FindEllipseRHT(object):
 
         img = cv2.line(img, solution[0], solution[1], color=50, thickness=1)
         return img
+
+
+
+
 
