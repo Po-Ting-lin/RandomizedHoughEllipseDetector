@@ -35,11 +35,11 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 3. negative --> Hyperbola
 * ellipse out of image
 
-### constraint
+### Constraint
 * semi major axis bound
 * semi minor axis bound
-* flattening bound
-* nucleus-cell ratio bound
+* flattening bound (customized)
+* nucleus-cell ratio bound (customized)
 
 ### Accumulating
 * weighted average
