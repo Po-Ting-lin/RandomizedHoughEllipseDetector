@@ -34,14 +34,17 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 2. zero --> Parabola
 3. negative --> Hyperbola
 * ellipse out of image
-* flattening is too large 
+
+### constraint
+* semi major axis bound
+* semi minor axis bound
+* flattening bound
+* nucleus-cell ratio bound
 
 ### Accumulating
-* semi major axis threshold
-* semi minor axis threshold
 * weighted average
-* (or costumize threshold)
 * select the best result
+* plot the best result by matlibplot
 
 
 # Comparison with the original Hough ellipse transform
@@ -60,7 +63,7 @@ Hough ellipse transform is impracticable on account of the computational process
 
 ### randomized hough ellipse detector
 
-the number of iteration for randomly picking pixels == edge pixels * 5  
+the number of iteration for randomly picking pixels == edge pixels * 8
 time complexity: linear  
 
 n = 337, time = 0.7 sec  
