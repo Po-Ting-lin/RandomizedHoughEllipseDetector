@@ -29,7 +29,6 @@ class FindEllipseRHT(object):
 
         # accumulator
         self.accumulator = []
-        self.score_threshold = 10
 
     def assert_img(self, img):
         assert len(img.shape) == 2, "this img is not 2D image"
@@ -156,8 +155,9 @@ class FindEllipseRHT(object):
             # plot candidate
             if debug_mode:
                 candidate += 1
-                if candidate == 12:
+                if candidate == 8:
                     print("axis_plot", 2*axis_plot[0], 2*axis_plot[1])
+                    print("angle: ", angle* 180 / np.pi)
                     self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle * 180 / np.pi, 0, 360, color=255, thickness=1)
                     self.black[int(center[1]), int(center[0])] = 230
                     self.find_center(point_package, plot_mode=True)
@@ -302,8 +302,8 @@ class FindEllipseRHT(object):
             return None, None, None
 
         if a > 0 and b > 0:
-            major = 1/np.sqrt(max(a, b))
-            minor = 1/np.sqrt(min(a, b))
+            major = 1/np.sqrt(min(a, b))
+            minor = 1/np.sqrt(max(a, b))
             return major, minor, angle
         else:
             return None, None, None
@@ -318,9 +318,17 @@ class FindEllipseRHT(object):
                 center_dist = np.sqrt((e[0] - p)**2 + (e[1] - q)**2)
                 # angle dist
                 angle_dist = (abs(e[4] - angle))
+                if angle >= 0:
+                    angle180 = angle - np.pi
+                else:
+                    angle180 = angle + np.pi
+                angle_dist180 = (abs(e[4] - angle180))
+                angle_final = min(angle_dist, angle_dist180)
+
+                # axis dist
                 major_axis_dist = abs(max(axis1, axis2)-max(e[2], e[3]))
                 minor_axis_dist = abs(min(axis1, axis2)-min(e[2], e[3]))
-                if (major_axis_dist < 5) and (center_dist < 5) and (angle_dist < 0.1745) and (minor_axis_dist < 10):
+                if (major_axis_dist < 10) and (center_dist < 5) and (angle_final < np.pi/18) and (minor_axis_dist < 10):
                     return idx
         return similar_idx
 
@@ -332,9 +340,9 @@ class FindEllipseRHT(object):
 
         if a > c:
             if b < 0:
-                angle += 0.5*np.pi
+                angle += 0.5*np.pi  # +90 deg
             elif b > 0:
-                angle -= 0.5*np.pi
+                angle -= 0.5*np.pi  # -90 deg
         return angle
 
     def assert_valid_ellipse(self, a, b, c):
