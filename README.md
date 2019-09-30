@@ -63,7 +63,7 @@ Hough ellipse transform is impracticable on account of the computational process
 
 ### randomized hough ellipse detector
 
-the number of iteration for randomly picking pixels == edge pixels * 8
+the number of iteration for randomly picking pixels == edge pixels * 8  
 time complexity: linear  
 
 n = 337, time = 0.7 sec  
