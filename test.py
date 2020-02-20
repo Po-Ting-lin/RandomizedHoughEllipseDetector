@@ -12,7 +12,7 @@ mask_binary[mask == 255] = True
 mask_binary[mask != 255] = False
 
 time1 = time.time()
-test = FindEllipseRHT(iters=1000, plot_mode=True, debug_mode=True)
+test = FindEllipseRHT(iters=1000, plot_mode=False)
 test.run(original_image, mask_binary)
 time2 = time.time()
 print("time consume: ", time2 - time1)

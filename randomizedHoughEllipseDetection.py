@@ -31,6 +31,7 @@ class FindEllipseRHT(object):
         self.major_bound = [60, 250]  # major axis
         self.minor_bound = [60, 250]  # minor axis
         self.max_flattening_bound = 0.8  # flattening
+        self.line_fitting_area = 7
 
         # plot
         self.black = None
@@ -193,7 +194,6 @@ class FindEllipseRHT(object):
         return [(ran[0][1], ran[0][0]), (ran[1][1], ran[1][0]), (ran[2][1], ran[2][0])]
 
     def find_center(self, pt, plot_mode=False):
-        size = 7  # fitting area
         m, c = 0, 0
         m_arr = []
         c_arr = []
@@ -201,10 +201,10 @@ class FindEllipseRHT(object):
         # pt[0] is p1; pt[1] is p2; pt[2] is p3;
         for i in range(len(pt)):
             # find tangent line
-            xstart = pt[i][0] - size//2
-            xend = pt[i][0] + size//2 + 1
-            ystart = pt[i][1] - size//2
-            yend = pt[i][1] + size//2 + 1
+            xstart = pt[i][0] - self.line_fitting_area//2
+            xend = pt[i][0] + self.line_fitting_area//2 + 1
+            ystart = pt[i][1] - self.line_fitting_area//2
+            yend = pt[i][1] + self.line_fitting_area//2 + 1
             crop = self.edge[ystart: yend, xstart: xend].T
             proximal_point = np.array(np.where(crop == 255)).T
             proximal_point[:, 0] += xstart
@@ -248,16 +248,10 @@ class FindEllipseRHT(object):
 
     def find_semi_axis(self, pt, center):
         # shift to origin
-        npt = []
-        for p in pt:
-            npt.append((p[0] - center[0], p[1] - center[1]))
+        npt = [(p[0] - center[0], p[1] - center[1]) for p in pt]
+
         # semi axis
-        x1 = npt[0][0]
-        y1 = npt[0][1]
-        x2 = npt[1][0]
-        y2 = npt[1][1]
-        x3 = npt[2][0]
-        y3 = npt[2][1]
+        x1, y1, x2, y2, x3, y3 = np.array(npt).flatten()
         coef_matrix = np.array([[x1**2, 2*x1*y1, y1**2], [x2**2, 2*x2*y2, y2**2], [x3**2, 2*x3*y3, y3**2]])
         dependent_variable = np.array([1, 1, 1])
         A, B, C = np.linalg.solve(coef_matrix, dependent_variable)
