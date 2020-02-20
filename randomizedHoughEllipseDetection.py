@@ -169,7 +169,6 @@ class FindEllipseRHT(object):
         if self.plot_mode:
             self.plot_best(p, q, a, b, best[-2])
         print("score: ", best[-1])
-        return
 
     def plot_best(self, p, q, a, b, angle):
         # plot best ellipse
@@ -188,20 +187,6 @@ class FindEllipseRHT(object):
         ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
         ax[1].set_title("Hough ellipse detector")
         fig.show()
-
-    def inner_outer_phase(self, p, q, a, b, angle):
-        ellipse_label = np.zeros(self.origin.shape, dtype=np.uint8)
-        if a > b:
-            ellipse_label = cv2.ellipse(ellipse_label, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=-1)
-        else:
-            ellipse_label = cv2.ellipse(ellipse_label, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=-1)
-        inner_list = self.origin[ellipse_label == 255]
-        outer_list = self.origin[(ellipse_label != 255) & (self.mask == True)]
-        inner_mean = np.mean(inner_list)
-        inner_std = np.std(inner_list)
-        outer_mean = np.mean(outer_list)
-        outer_std = np.std(outer_list)
-        return round(inner_mean/outer_mean, 3)
 
     def randomly_pick_point(self):
         ran = random.sample(self.edge_pixels, 3)
