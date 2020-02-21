@@ -138,7 +138,7 @@ class FindEllipseRHT(object):
             # accumulate
             similar_idx = self.is_similar(center[0], center[1], semi_major, semi_minor, angle)
 
-            # does not find any similar ellipse in accumulator
+            # did not find any similar ellipse in accumulator
             if similar_idx == -1:
                 score = 1
                 self.accumulator.append([center[0], center[1], semi_major, semi_minor, angle, score])
