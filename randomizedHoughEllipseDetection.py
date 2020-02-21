@@ -41,7 +41,8 @@ class FindEllipseRHT(object):
         # accumulator
         self.accumulator = []
 
-    def assert_img(self, img):
+    @staticmethod
+    def assert_img(img):
         assert len(img.shape) == 2, "this img is not 2D image"
         assert type(img).__module__ == np.__name__, "this img is not numpy array"
         return img
@@ -173,11 +174,7 @@ class FindEllipseRHT(object):
 
     def plot_best(self, p, q, a, b, angle):
         # plot best ellipse
-        result = np.zeros(self.edge.shape, dtype=np.uint8)
-        if a > b:
-            result = cv2.ellipse(result, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-        else:
-            result = cv2.ellipse(result, (p, q), (b, a), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
+        result = self.plot_ellipse(np.zeros(self.edge.shape, dtype=np.uint8), p, q, a, b, angle)
 
         fig, ax = plt.subplots(nrows=1, ncols=2)
         ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
@@ -323,6 +320,11 @@ class FindEllipseRHT(object):
 
     def average_weight(self, old, now, score):
         return (old * score + now) / (score+1)
+
+    def plot_ellipse(self, img, p, q, a, b, angle):
+        major = a if a >= b else b
+        minor = b if a >= b else a
+        return cv2.ellipse(img, (p, q), (major, minor), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
 
     def plot_line(self, img, m, c):
         if m == 0:
