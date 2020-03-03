@@ -65,7 +65,7 @@ time complexity: more than quadratic. (impracticable)
 
 ### randomized hough ellipse detector
 
-the number of iteration for randomly picking pixels == edge pixels * 10
+the number of iteration for randomly picking pixels = edge pixels * 10
 time complexity: linear  
 
 n = 337, time = 0.7 sec  
