@@ -57,7 +57,7 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 n = 337, time = 2.67 sec  
 n = 439, time = 5.1 sec  
 n = 644, time = 15.3 sec  
-time complexity: more than cubic  (impracticable)
+time complexity: more than quadratic. (impracticable)
 
 ![](/image/hough.png)
 
