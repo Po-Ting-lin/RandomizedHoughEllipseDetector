@@ -1,10 +1,10 @@
 import cv2
+import time
+import pandas as pd
 import numpy as np
 import random
 from matplotlib import pyplot as plt
 from skimage.feature import canny
-import pandas as pd
-import time
 
 
 class RHTException(Exception):

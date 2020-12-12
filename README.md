@@ -1,14 +1,13 @@
 # Randomized-Hough-Ellipse-Detector
 
-* Purpose: find an ellipse
-* Date: 20190915
+Implementation of Randomized Hough Ellipse Transform. This repository refers to the publication [1].
 
-### prerequisite
-```
-cv2, numpy, matplotlib, skimage, pandas, random
-```
+### Reference
 
-Following the protocol of [Ellipse Detection Using Randomized HoughTransform](https://www.researchgate.net/publication/238703185_Ellipse_Detection_Using_Randomized_Hough_Transform)
+```
+[1]. Inverso, Samuel. "Ellipse detection using randomized Hough transform." 
+     Final Project: introduction to computer vision (2002): 4005-4757.
+```
 
 ### Canny edge detecor
 * Noise reduction
@@ -47,17 +46,13 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 ### Accumulating
 * weighted average
 * select the best result
-* plot the best result by matlibplot
-
 
 # Comparison with the original Hough ellipse transform
 
 ### skimage.transform hough_ellipse
-
 n = 337, time = 2.67 sec  
 n = 439, time = 5.1 sec  
 n = 644, time = 15.3 sec  
-time complexity: more than quadratic. (impracticable)
 
 ![](/image/hough.png)
 
@@ -65,13 +60,10 @@ time complexity: more than quadratic. (impracticable)
 
 ### randomized hough ellipse detector
 
-the number of iteration for randomly picking pixels = edge pixels * 10  
 time complexity: linear  
-
 n = 337, time = 0.7 sec  
 n = 439, time = 1.1 sec  
 n = 644, time = 1.5 sec  
-Nice!
 
 ![](/image/Rhough.png)
 
