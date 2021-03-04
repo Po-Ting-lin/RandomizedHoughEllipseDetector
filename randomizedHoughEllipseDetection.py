@@ -1,9 +1,7 @@
 import cv2
 import time
-import pandas as pd
 import numpy as np
 import random
-from matplotlib import pyplot as plt
 from skimage.feature import canny
 
 
@@ -15,9 +13,101 @@ class RHTException(Exception):
         return self.message if self.message else "some thing wrong!"
 
 
+class Candidate(object):
+    def __init__(self, p, q, a, b, angle):
+        self.p = p
+        self.q = q
+        self.a = a
+        self.b = b
+        self.angle = angle
+        self.score = 1
+
+    @staticmethod
+    def average_weight(old, now, score):
+        return (old * score + now) / (score + 1)
+
+    def average(self, candidate):
+        self.score += 1
+        self.p = self.average_weight(self.p, candidate.p, self.score)
+        self.q = self.average_weight(self.q, candidate.q, self.score)
+        self.a = self.average_weight(self.a, candidate.a, self.score)
+        self.b = self.average_weight(self.b, candidate.b, self.score)
+        self.angle = self.average_weight(self.angle, candidate.angle, self.score)
+
+    def is_similar(self, candidate):
+        area_dist = np.abs((np.pi * self.a * self.b - np.pi * candidate.a * candidate.b))
+        center_dist = np.sqrt((self.p - candidate.p) ** 2 + (self.q - candidate.q) ** 2)
+        angle_dist = (abs(self.angle - candidate.angle))
+        if candidate.angle >= 0:
+            angle180 = candidate.angle - np.pi
+        else:
+            angle180 = candidate.angle + np.pi
+        angle_dist180 = (abs(self.angle - angle180))
+        angle_final = min(angle_dist, angle_dist180)
+
+        # axis dist
+        major_axis_dist = abs(max(candidate.a, candidate.b) - max(self.a, self.b))
+        minor_axis_dist = abs(min(candidate.a, candidate.b) - min(self.a, self.b))
+        if (major_axis_dist < 10) and (center_dist < 5) and (angle_final < np.pi / 18) and (minor_axis_dist < 10):
+            return True
+        else:
+            return False
+
+    def __str__(self):
+        text = ""
+        text += str(np.round(self.p)) + ", "
+        text += str(np.round(self.q)) + ", "
+        text += str(np.round(self.a)) + ", "
+        text += str(np.round(self.b)) + ", "
+        text += str(np.round(self.angle, 3)) + ", "
+        text += str(np.round(self.score))
+        return text
+
+
+class Accumulator(object):
+    def __init__(self):
+        self.accumulator = []
+        self.score_map = []
+
+    def get_best_candidate(self):
+        index = int(np.argmax(self.score_map))
+        print("best: ", str(self.accumulator[index]))
+        return self.accumulator[index]
+
+    def evaluate_candidate(self, new_candidate):
+        index = self.__get_similar_index(new_candidate)
+        if index == -1:
+            self.__add(new_candidate)
+        else:
+            self.__merge(index, new_candidate)
+
+    def __add(self, candidate):
+        self.accumulator.append(candidate)
+        self.score_map.append(candidate.score)
+
+    def __merge(self, index, candidate):
+        self.accumulator[index].average(candidate)
+        self.score_map[index] += 1
+
+    def __get_similar_index(self, new_candidate):
+        similar_idx = -1
+        if len(self.accumulator) > 0:
+            for idx, candidate in enumerate(self.accumulator):
+                if candidate.is_similar(new_candidate):
+                    return idx
+        return similar_idx
+
+    def __str__(self):
+        text = ""
+        for candidate in self.accumulator:
+            if candidate.score != 0:
+                text += str(candidate)
+                text += "\n"
+        return text
+
+
 class FindEllipseRHT(object):
-    """ find a ellipse by randomized Hough Transform"""
-    def __init__(self, iters=1000, debug_mode=False, plot_mode=False):
+    def __init__(self, iters):
         # image
         self.origin = None
         self.mask = None
@@ -33,57 +123,21 @@ class FindEllipseRHT(object):
         self.max_flattening_bound = 0.8  # flattening
         self.line_fitting_area = 7
 
-        # plot
-        self.black = None
-        self.plot_mode = plot_mode
-        self.debug_mode = debug_mode
-
         # accumulator
-        self.accumulator = []
-
-    @staticmethod
-    def assert_img(img):
-        assert len(img.shape) == 2, "this img is not 2D image"
-        assert type(img).__module__ == np.__name__, "this img is not numpy array"
-        return img
-
-    @staticmethod
-    def is_no_edge_pixel(edge_pixels):
-        return True if len(edge_pixels) < 15 else False
-
-    def point_out_of_image(self, point):
-        """ point X, Y"""
-        if point[0] < 0 or point[0] >= self.edge.shape[1] or point[1] < 0 or point[1] >= self.edge.shape[0]:
-            raise RHTException("center is out of image!")
-
-    def is_ellipse_out_of_mask(self, center_plot, axis_plot, angle):
-        e, out_of_mask = np.zeros_like(self.black), np.zeros_like(self.black)
-        e = cv2.ellipse(e, center_plot, axis_plot, angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-        out_of_mask[(e == 255) & (self.mask == False)] = 255
-        return True if np.sum(out_of_mask) > 0 else False
-
-    def canny_edge_detector(self, img):
-        edged_image = canny(img, sigma=3.5, low_threshold=25, high_threshold=30, mask=self.mask)
-        edge = np.zeros(edged_image.shape, dtype=np.uint8)
-        edge[edged_image == True] = 255
-        edge[edged_image == False] = 0
-        if self.plot_mode:
-            plt.figure()
-            plt.imshow(edged_image, cmap='gray')
-            plt.show()
-        return edge
+        self.accumulator = Accumulator()
 
     def run(self, phase_img, mask):
-
-        # load images
-        self.origin = self.assert_img(phase_img)
+        self.assert_img(phase_img)
+        self.assert_img(mask)
+        self.origin = phase_img
         self.mask = mask
+        self.edge = np.zeros(self.origin.shape, dtype=np.uint8)
 
         # seed
         random.seed((time.time()*100) % 50)
 
         # canny
-        self.edge = self.canny_edge_detector(self.origin)
+        self.canny_edge_detector()
 
         # find coordinates of edge
         edge_pixels = np.array(np.where(self.edge == 255)).T
@@ -93,9 +147,6 @@ class FindEllipseRHT(object):
             raise RHTException("no edge!!")
         else:
             self.edge_pixels = [p for p in edge_pixels]
-
-        # plot mode
-        self.black = np.zeros(self.edge.shape, dtype=np.uint8)
 
         # determine the number of iteration
         if len(self.edge_pixels) > 100:
@@ -130,61 +181,20 @@ class FindEllipseRHT(object):
             # out of mask?
             if self.is_ellipse_out_of_mask(center_plot, axis_plot, angle):
                 continue
-            else:
-                if self.plot_mode:
-                    self.black = cv2.ellipse(self.black, center_plot, axis_plot, angle * 180 / np.pi, 0, 360, color=255,
-                                         thickness=1)
 
             # accumulate
-            similar_idx = self.is_similar(center[0], center[1], semi_major, semi_minor, angle)
-
-            # did not find any similar ellipse in accumulator
-            if similar_idx == -1:
-                score = 1
-                self.accumulator.append([center[0], center[1], semi_major, semi_minor, angle, score])
-
-            # find the most similar candidate in accumulator
-            else:
-                # score += 1
-                self.accumulator[similar_idx][-1] += 1
-                # average weights
-                w = self.accumulator[similar_idx][-1]
-                for i, para in enumerate([center[0], center[1], semi_major, semi_minor, angle]):
-                    self.accumulator[similar_idx][i] = self.average_weight(self.accumulator[similar_idx][i], para, w)
-
-        if self.plot_mode or self.debug_mode:
-            plt.figure()  # demo
-            plt.title("candidates")
-            plt.imshow(self.black, cmap='jet')
-            plt.show()
-
-        # sort ellipse candidates
-        self.accumulator = np.array(self.accumulator)
-        if self.accumulator.shape[0] == 0:
-            raise RHTException("not found any ellipse")
-        df = pd.DataFrame(data=self.accumulator, columns=['x', 'y', 'axis1', 'axis2', 'angle', 'score'])
-        self.accumulator = df.sort_values(by=['score'], ascending=False)
+            candidate = Candidate(center[0], center[1], semi_major, semi_minor, angle)
+            self.accumulator.evaluate_candidate(candidate)
 
         # select the ellipses with the highest score
-        best = np.squeeze(np.array(self.accumulator.iloc[0]))
-        p, q, a, b = list(map(int, np.around(best[:4])))
-        if self.plot_mode:
-            self.plot_best(p, q, a, b, best[-2])
-        print("score: ", best[-1])
+        best_candidate = self.accumulator.get_best_candidate()
+        # print(self.accumulator)
+        return best_candidate
 
-    def plot_best(self, p, q, a, b, angle):
-        # plot best ellipse
-        result = self.plot_ellipse(np.zeros(self.edge.shape, dtype=np.uint8), p, q, a, b, angle)
-
-        fig, ax = plt.subplots(nrows=1, ncols=2)
-        ax[0].imshow(self.origin, cmap='jet', vmax=255, vmin=0)
-        ax[0].set_title("phase image")
-        crop = self.origin.copy()
-        crop[self.edge == 255] = 0  # blue
-        crop[result == 255] = 230  # red
-        ax[1].imshow(crop, cmap='jet', vmax=255, vmin=0)
-        ax[1].set_title("Hough ellipse detector")
-        fig.show()
+    def canny_edge_detector(self):
+        edged_image = canny(self.origin, sigma=3.5, low_threshold=25, high_threshold=30, mask=self.mask)
+        self.edge[edged_image == True] = 255
+        self.edge[edged_image == False] = 0
 
     def randomly_pick_point(self):
         ran = random.sample(self.edge_pixels, 3)
@@ -268,30 +278,6 @@ class FindEllipseRHT(object):
         else:
             raise RHTException
 
-    def is_similar(self, p, q, axis1, axis2, angle):
-        similar_idx = -1
-        if self.accumulator is not None:
-            for idx, e in enumerate(self.accumulator):
-                # area dist
-                area_dist = np.abs((np.pi*e[2]*e[3] - np.pi * axis1 * axis2))
-                # center dist
-                center_dist = np.sqrt((e[0] - p)**2 + (e[1] - q)**2)
-                # angle dist
-                angle_dist = (abs(e[4] - angle))
-                if angle >= 0:
-                    angle180 = angle - np.pi
-                else:
-                    angle180 = angle + np.pi
-                angle_dist180 = (abs(e[4] - angle180))
-                angle_final = min(angle_dist, angle_dist180)
-
-                # axis dist
-                major_axis_dist = abs(max(axis1, axis2)-max(e[2], e[3]))
-                minor_axis_dist = abs(min(axis1, axis2)-min(e[2], e[3]))
-                if (major_axis_dist < 10) and (center_dist < 5) and (angle_final < np.pi/18) and (minor_axis_dist < 10):
-                    return idx
-        return similar_idx
-
     def calculate_rotation_angle(self, a, b, c):
         if a == c:
             angle = 0
@@ -324,6 +310,8 @@ class FindEllipseRHT(object):
     def plot_ellipse(self, img, p, q, a, b, angle):
         major = a if a >= b else b
         minor = b if a >= b else a
+        p, q = int(p), int(q)
+        major, minor = int(major), int(minor)
         return cv2.ellipse(img, (p, q), (major, minor), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
 
     def plot_line(self, img, m, c):
@@ -352,6 +340,27 @@ class FindEllipseRHT(object):
 
         img = cv2.line(img, solution[0], solution[1], color=50, thickness=1)
         return img
+
+    @staticmethod
+    def assert_img(img):
+        assert len(img.shape) == 2, "this img is not 2D image"
+        assert type(img).__module__ == np.__name__, "this img is not numpy array"
+
+    @staticmethod
+    def is_no_edge_pixel(edge_pixels):
+        return True if len(edge_pixels) < 15 else False
+
+    def point_out_of_image(self, point):
+        if point[0] < 0 or point[0] >= self.edge.shape[1] or point[1] < 0 or point[1] >= self.edge.shape[0]:
+            raise RHTException("center is out of image!")
+
+    def is_ellipse_out_of_mask(self, center_plot, axis_plot, angle):
+        e, out_of_mask = np.zeros_like(self.origin), np.zeros_like(self.origin)
+        center = (int(center_plot[0]), int(center_plot[1]))
+        axis = (int(axis_plot[0]), int(axis_plot[1]))
+        e = cv2.ellipse(e, center, axis, angle * 180 / np.pi, 0, 360, color=255, thickness=1)
+        out_of_mask[(e == 255) & (self.mask == False)] = 255
+        return True if np.sum(out_of_mask) > 0 else False
 
 
 
