@@ -164,16 +164,22 @@ class FindEllipseRHT(object):
         if len(self.edge_pixels) > 100:
             self.info.MaxIter = len(self.edge_pixels) * 10
 
-        # find the candidates
-        for i in range(self.info.MaxIter):
+        self.find_candidate()
 
+        # select the ellipses with the highest score
+        best_candidate = self.accumulator.get_best_candidate()
+        # print(self.accumulator)
+        return best_candidate
+
+    def find_candidate(self):
+        for i in range(self.info.MaxIter):
             # randomly pick 3 points
             point_package = self.randomly_pick_point()
 
             # find center
             try:
                 center = self.find_center(point_package)
-            except np.linalg.LinAlgError as err:
+            except np.linalg.LinAlgError:  # Singular matrix
                 continue
             except RHTException:
                 continue
@@ -181,27 +187,22 @@ class FindEllipseRHT(object):
             # find axis
             try:
                 semi_major, semi_minor, angle = self.find_semi_axis(point_package, center)
-            except np.linalg.LinAlgError as err:
+            except np.linalg.LinAlgError:  # Singular matrix
                 continue
             except RHTException:
                 continue
 
             # plot
-            center_plot = (int(round(center[0])), int(round(center[1])))
-            axis_plot = (int(round(semi_major)), int(round(semi_minor)))
+            center = (int(round(center[0])), int(round(center[1])))
+            axis = (int(round(semi_major)), int(round(semi_minor)))
 
             # out of mask?
-            if self.is_ellipse_out_of_mask(center_plot, axis_plot, angle):
+            if self.is_ellipse_out_of_mask(center, axis, angle):
                 continue
 
             # accumulate
             candidate = Candidate(center[0], center[1], semi_major, semi_minor, angle, self.info)
             self.accumulator.evaluate_candidate(candidate)
-
-        # select the ellipses with the highest score
-        best_candidate = self.accumulator.get_best_candidate()
-        # print(self.accumulator)
-        return best_candidate
 
     def canny_edge_detector(self):
         edged_image = canny(self.origin,
