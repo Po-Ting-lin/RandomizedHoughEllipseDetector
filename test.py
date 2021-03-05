@@ -1,4 +1,4 @@
-from randomizedHoughEllipseDetection import FindEllipseRHT
+from randomizedHoughEllipseDetection import FindEllipseRHT, FindEllipseRHTInfo
 import time
 import cv2
 import matplotlib.pyplot as plt
@@ -10,12 +10,12 @@ mask_binary = np.zeros(mask.shape, dtype=bool)
 mask_binary[mask == 255] = True
 mask_binary[mask != 255] = False
 
+info = FindEllipseRHTInfo()
 time1 = time.time()
-find_ellipse_RHT = FindEllipseRHT(iters=1000)
+find_ellipse_RHT = FindEllipseRHT(info)
 result = find_ellipse_RHT.run(original_image, mask_binary)
 time2 = time.time()
 print("time consume: ", time2 - time1)
-
 
 
 p = int(result.p)
