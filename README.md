@@ -1,7 +1,7 @@
 # Randomized-Hough-Ellipse-Detector
 
-Implementation of Randomized Hough Ellipse Transform. This repository refers to the publication [1].
-Multithreading version: ![RHET](https://github.com/Po-Ting-lin/RandomizedHoughEllipse)
+Implementation of Randomized Hough Ellipse Transform. This repository refers to the publication [1].  
+Multithreading version: [RHET](https://github.com/Po-Ting-lin/RandomizedHoughEllipse "Title")
 
 ### Reference
 
