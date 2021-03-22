@@ -1,6 +1,7 @@
 # Randomized-Hough-Ellipse-Detector
 
 Implementation of Randomized Hough Ellipse Transform. This repository refers to the publication [1].
+Multithreading version: ![RHET](https://github.com/Po-Ting-lin/RandomizedHoughEllipse)
 
 ### Reference
 
@@ -44,7 +45,7 @@ Use random.sample() to select three points; then, find the parameter of ellipse 
 * nucleus-cell ratio bound (customized)
 
 ### Accumulating
-* weighted average
+* voting
 * select the best result
 
 # Comparison with the original Hough ellipse transform
