@@ -1,4 +1,4 @@
-from randomizedHoughEllipseDetection import FindEllipseRHT, FindEllipseRHTInfo
+from randomizedHoughEllipseDetection import EllipseDetector, EllipseDetectorInfo
 import time
 import cv2
 import matplotlib.pyplot as plt
@@ -12,12 +12,33 @@ if __name__ == '__main__':
     mask_binary[mask == 255] = True
     mask_binary[mask != 255] = False
 
-    info = FindEllipseRHTInfo()
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4))
+    ax[0].set_title("original")
+    ax[0].imshow(original_image, cmap='jet', vmax=255, vmin=0)
+    ax[0].axis("off")
+    ax[1].set_title("mask")
+    ax[1].imshow(mask, cmap='gray')
+    ax[1].axis("off")
+
+    info = EllipseDetectorInfo()
+    info.MaxIter = 5000
+    info.MaxIter = 1000
+    info.MajorAxisBound = [60, 250]
+    info.MinorAxisBound = [60, 250]
+    info.MaxFlattening = 0.8
+    info.CannySigma = 3.5
+    info.CannyT1 = 25
+    info.CannyT2 = 30
+    info.SimilarCenterDist = 5
+    info.SimilarMajorAxisDist = 10
+    info.SimilarMinorAxisDist = 10
+    info.SimilarAngleDist = np.pi / 18
+
     time1 = time.time()
-    find_ellipse_RHT = FindEllipseRHT(info)
-    result = find_ellipse_RHT.run(original_image, mask_binary)
+    obj = EllipseDetector(info)
+    result = obj.run(original_image, mask_binary)
     time2 = time.time()
-    print("time consume: ", time2 - time1)
+    print("time consume: {:.2f} s".format(time2 - time1))
 
     p = int(result.p)
     q = int(result.q)
@@ -26,7 +47,8 @@ if __name__ == '__main__':
     angle = result.angle
     result = original_image.copy()
     result = cv2.ellipse(result, (p, q), (a, b), angle * 180 / np.pi, 0, 360, color=255, thickness=1)
-    plt.figure()
-    plt.title("Hough ellipse detector")
-    plt.imshow(result, cmap='jet', vmax=255, vmin=0)
+    ax[2].set_title("result")
+    ax[2].imshow(result, cmap='jet', vmax=255, vmin=0)
+    ax[2].axis("off")
+    plt.tight_layout()
     plt.show()
